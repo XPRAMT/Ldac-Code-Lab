@@ -9,6 +9,10 @@ Cross-platform Python GUI for experimenting with LDAC encoding and decoding on W
 - Select an audio file and automatically choose the operation:
   - Non-`.ldac` input: convert to PCM and encode to `.ldac`
   - `.ldac` input: decode to 24-bit WAV or FLAC
+- LDAC round-trip test:
+  - Input audio -> LDAC encode -> LDAC decode -> WAV or FLAC
+  - Useful for checking how LDAC changes the decoded audio
+  - Output names use `_ldac`, for example `song_ldac.wav` or `song_ldac.flac`
 - LDAC bitrate presets: 990, 660, 330 kbps
 - Custom bitrate support
 - Custom LDAC gradient parameters:

@@ -9,6 +9,10 @@
 - 選擇音訊檔後自動判斷操作：
   - 非 `.ldac` 輸入：轉成 PCM 後編碼為 `.ldac`
   - `.ldac` 輸入：解碼為 24-bit WAV 或 FLAC
+- LDAC 往返測試：
+  - 輸入音訊 -> LDAC 編碼 -> LDAC 解碼 -> WAV 或 FLAC
+  - 用於檢查 LDAC 對解碼後音訊的影響
+  - 輸出檔名會使用 `_ldac`，例如 `song_ldac.wav` 或 `song_ldac.flac`
 - LDAC 碼率預設：990、660、330 kbps
 - 支援自訂碼率
 - 支援自訂 LDAC gradient 參數：

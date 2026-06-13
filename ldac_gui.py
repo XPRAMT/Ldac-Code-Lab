@@ -105,6 +105,8 @@ class LdacJob(QThread):
         try:
             if self.mode == "encode":
                 output = self.encode_audio()
+            elif self.mode == "roundtrip":
+                output = self.roundtrip_audio()
             else:
                 output = self.decode_ldac()
             self.done.emit(output)
@@ -152,6 +154,73 @@ class LdacJob(QThread):
             self.log.emit(run_command(ldac_cmd, cwd=APP_DIR))
 
         return output_ldac
+
+    def roundtrip_audio(self) -> Path:
+        if not FFMPEG.exists():
+            raise FileNotFoundError(f"ffmpeg not found: {FFMPEG}")
+        if not LDACENC_RAW_EXE.exists():
+            raise FileNotFoundError(f"LDAC encoder not found: {LDACENC_RAW_EXE}")
+        if not LDACDEC_WAV_EXE.exists():
+            raise FileNotFoundError(f"LDAC decoder not found: {LDACDEC_WAV_EXE}")
+
+        final_output = self.output_path
+        with tempfile.TemporaryDirectory(prefix="ldac_gui_") as tmp:
+            tmp_dir = Path(tmp)
+            pcm_path = tmp_dir / "input_f32le.pcm"
+            ldac_path = tmp_dir / "roundtrip.ldac"
+            decoded_wav = tmp_dir / "decoded_24bit.wav"
+            encode_rate = self.sample_rate or 48000
+
+            ffmpeg_cmd = [
+                str(FFMPEG),
+                "-y",
+                "-hide_banner",
+                "-loglevel",
+                "error",
+                "-i",
+                str(self.input_path),
+                "-map",
+                "0:a:0",
+                "-ac",
+                "2",
+                "-ar",
+                str(encode_rate),
+                "-c:a",
+                "pcm_f32le",
+                "-f",
+                "f32le",
+                str(pcm_path),
+            ]
+            self.log.emit("Decode input to 32-bit float stereo PCM...")
+            self.log.emit(run_command(ffmpeg_cmd))
+            if not pcm_path.exists() or pcm_path.stat().st_size == 0:
+                raise RuntimeError("ffmpeg did not produce PCM data; input may be unreadable or corrupted.")
+
+            self.log.emit(f"Encode temporary LDAC at {self.bitrate} kbps...")
+            self.log.emit(run_command(self.build_encode_command(pcm_path, ldac_path, encode_rate), cwd=APP_DIR))
+
+            self.log.emit("Decode temporary LDAC to 24-bit PCM WAV...")
+            self.log.emit(run_command([str(LDACDEC_WAV_EXE), str(ldac_path), str(decoded_wav)], cwd=APP_DIR))
+
+            if self.output_format == "wav":
+                shutil.copyfile(decoded_wav, final_output)
+            else:
+                ffmpeg_cmd = [
+                    str(FFMPEG),
+                    "-y",
+                    "-hide_banner",
+                    "-loglevel",
+                    "error",
+                    "-i",
+                    str(decoded_wav),
+                    "-c:a",
+                    "flac",
+                    str(final_output),
+                ]
+                self.log.emit("Save round-trip output as FLAC...")
+                self.log.emit(run_command(ffmpeg_cmd))
+
+        return final_output
 
     def build_encode_command(self, pcm_path: Path, output_ldac: Path, sample_rate: int) -> list[str]:
         options = [
@@ -363,9 +432,12 @@ class MainWindow(QMainWindow):
 
         self.run_button = QPushButton("開始")
         self.run_button.clicked.connect(self.start_auto)
+        self.roundtrip_button = QPushButton("LDAC往返測試")
+        self.roundtrip_button.clicked.connect(self.start_roundtrip)
 
         action_row = QHBoxLayout()
         action_row.addWidget(self.run_button)
+        action_row.addWidget(self.roundtrip_button)
         action_row.addStretch(1)
 
         self.progress = QProgressBar()
@@ -450,6 +522,9 @@ class MainWindow(QMainWindow):
             return input_path.with_suffix(f".{self.output_format.currentText()}")
         return input_path.with_suffix(".ldac")
 
+    def roundtrip_output_path(self, input_path: Path) -> Path:
+        return input_path.with_name(f"{input_path.stem}_ldac.{self.output_format.currentText()}")
+
     def selected_input(self) -> Path | None:
         text = self.input_edit.text().strip()
         if not text:
@@ -484,6 +559,18 @@ class MainWindow(QMainWindow):
             if output is None:
                 return
             self.start_job("encode", path, output)
+
+    def start_roundtrip(self) -> None:
+        path = self.require_input()
+        if path is None:
+            return
+        if path.suffix.lower() == ".ldac":
+            QMessageBox.warning(self, "輸入類型不符", "LDAC 往返測試需要一般音訊檔，不接受 .ldac。")
+            return
+        output = self.roundtrip_output_path(path)
+        self.output_edit.setText(str(output))
+        output.parent.mkdir(parents=True, exist_ok=True)
+        self.start_job("roundtrip", path, output)
 
     def require_input(self) -> Path | None:
         path = self.selected_input()
@@ -530,6 +617,7 @@ class MainWindow(QMainWindow):
         self.browse_button.setEnabled(not busy)
         self.output_button.setEnabled(not busy)
         self.run_button.setEnabled(not busy)
+        self.roundtrip_button.setEnabled(not busy)
         self.progress.setRange(0, 0 if busy else 1)
         if not busy:
             self.progress.setValue(1)
