@@ -34,7 +34,16 @@ APP_DIR = Path(__file__).resolve().parents[1]
 WINDOWS_TOOLS_DIR = Path(__file__).resolve().parent / "bin"
 LDACENC_RAW_EXE = WINDOWS_TOOLS_DIR / "ldacenc_raw.exe"
 LDACDEC_WAV_EXE = WINDOWS_TOOLS_DIR / "ldacdec_wav.exe"
-FFMPEG = Path(r"C:\Program Files\Hybrid\64bit\ffmpeg.exe")
+
+
+def find_ffmpeg() -> Path:
+    ffmpeg = shutil.which("ffmpeg")
+    if ffmpeg:
+        return Path(ffmpeg)
+    return Path("ffmpeg")
+
+
+FFMPEG = find_ffmpeg()
 
 
 def run_command(args: list[str], cwd: Path | None = None) -> str:

@@ -48,10 +48,13 @@ The GUI uses Windows native helper binaries in `bin/`:
 
 These are built from the local LDAC source tree and avoid requiring WSL at runtime.
 
-FFmpeg is still required for general audio format conversion. The GUI currently expects:
+FFmpeg is still required for general audio format conversion. Install FFmpeg and make sure
+`ffmpeg` can be executed from your `PATH`.
 
-```text
-C:\Program Files\Hybrid\64bit\ffmpeg.exe
+Check from PowerShell:
+
+```powershell
+ffmpeg -version
 ```
 
 ## Source Code Origins
