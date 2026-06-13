@@ -14,6 +14,7 @@
   - 用於檢查 LDAC 對解碼後音訊的影響
   - 輸出檔名會使用 `_ldac`，例如 `song_ldac.wav` 或 `song_ldac.flac`
 - 使用 Qt Linguist 翻譯檔的多語言 GUI：
+  - 系統預設自動偵測
   - 英語
   - 繁體中文（台灣）
   - 簡體中文

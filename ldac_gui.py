@@ -8,7 +8,7 @@ import sys
 import tempfile
 from pathlib import Path
 
-from PySide6.QtCore import Qt, QThread, QTranslator, Signal
+from PySide6.QtCore import QLocale, Qt, QThread, QTranslator, Signal
 from PySide6.QtWidgets import (
     QApplication,
     QCheckBox,
@@ -35,6 +35,7 @@ APP_DIR = Path(__file__).resolve().parents[1]
 TOOLS_DIR = Path(__file__).resolve().parent / "bin"
 LANGUAGE_DIR = Path(__file__).resolve().parent / "language"
 LANGUAGES = [
+    ("system", "System Default"),
     ("en_US", "English"),
     ("zh_TW", "繁體中文（台灣）"),
     ("zh_CN", "简体中文"),
@@ -286,7 +287,7 @@ class MainWindow(QMainWindow):
         self.resize(860, 620)
         self.job: LdacJob | None = None
         self.translator = QTranslator(self)
-        self.current_language = "en_US"
+        self.current_language = "system"
 
         self.language_label = QLabel()
         self.language_combo = QComboBox()
@@ -361,6 +362,8 @@ class MainWindow(QMainWindow):
         self.gradient_box.setChecked(False)
         gradient_grid = QGridLayout()
         self.gradient_spins: dict[str, QSpinBox] = {}
+        self.gradient_labels: dict[str, QLabel] = {}
+        self.gradient_tooltips: dict[str, str] = {}
         gradient_specs = [
             (
                 "nbands",
@@ -368,7 +371,7 @@ class MainWindow(QMainWindow):
                 2,
                 17,
                 12,
-                self.tr("Base bands count; controls how many frequency bands are encoded. At 48 kHz LDAC clamps this internally, and too high a value may fail initialization."),
+                "Base bands count; controls how many frequency bands are encoded. At 48 kHz LDAC clamps this internally, and too high a value may fail initialization.",
             ),
             (
                 "grad-mode",
@@ -376,7 +379,7 @@ class MainWindow(QMainWindow):
                 0,
                 3,
                 0,
-                self.tr("Gradient mode; controls how the bit allocation gradient curve is interpreted. Mode 0 uses the full qu/offset range and is useful for manual experiments."),
+                "Gradient mode; controls how the bit allocation gradient curve is interpreted. Mode 0 uses the full qu/offset range and is useful for manual experiments.",
             ),
             (
                 "grad-qu-l",
@@ -384,7 +387,7 @@ class MainWindow(QMainWindow):
                 0,
                 31,
                 18,
-                self.tr("Gradient start quantization unit; lower values make the allocation curve affect lower and mid frequencies earlier."),
+                "Gradient start quantization unit; lower values make the allocation curve affect lower and mid frequencies earlier.",
             ),
             (
                 "grad-qu-h",
@@ -392,7 +395,7 @@ class MainWindow(QMainWindow):
                 1,
                 32,
                 32,
-                self.tr("Gradient end quantization unit; higher values extend the allocation curve into higher-frequency units."),
+                "Gradient end quantization unit; higher values extend the allocation curve into higher-frequency units.",
             ),
             (
                 "grad-ofst-l",
@@ -400,7 +403,7 @@ class MainWindow(QMainWindow):
                 0,
                 31,
                 7,
-                self.tr("Start offset; affects bit retention near the beginning of the gradient. Lower values usually preserve more bits there."),
+                "Start offset; affects bit retention near the beginning of the gradient. Lower values usually preserve more bits there.",
             ),
             (
                 "grad-ofst-h",
@@ -408,7 +411,7 @@ class MainWindow(QMainWindow):
                 0,
                 31,
                 23,
-                self.tr("End offset; affects high-frequency bit retention. Lower values usually preserve more high-frequency bits but consume budget from other bands."),
+                "End offset; affects high-frequency bit retention. Lower values usually preserve more high-frequency bits but consume budget from other bands.",
             ),
             (
                 "abc",
@@ -416,17 +419,17 @@ class MainWindow(QMainWindow):
                 0,
                 1,
                 0,
-                self.tr("Advanced bit allocation control flag. Original tables mostly use 0; enabling it may change allocation behavior and should be verified by testing."),
+                "Advanced bit allocation control flag. Original tables mostly use 0; enabling it may change allocation behavior and should be verified by testing.",
             ),
         ]
         for index, (key, label, low, high, default, tooltip) in enumerate(gradient_specs):
             name_label = QLabel(label)
-            name_label.setToolTip(tooltip)
             spin = QSpinBox()
             spin.setRange(low, high)
             spin.setValue(default)
-            spin.setToolTip(tooltip)
+            self.gradient_labels[key] = name_label
             self.gradient_spins[key] = spin
+            self.gradient_tooltips[key] = tooltip
             row = index // 2
             col = (index % 2) * 2
             gradient_grid.addWidget(name_label, row, col)
@@ -492,14 +495,36 @@ class MainWindow(QMainWindow):
             return
         app.removeTranslator(self.translator)
         self.translator = QTranslator(self)
-        qm_path = LANGUAGE_DIR / f"ldac_code_lab_{code}.qm"
+        actual_code = self.resolve_language_code(code)
+        qm_path = LANGUAGE_DIR / f"ldac_code_lab_{actual_code}.qm"
         if qm_path.exists() and self.translator.load(str(qm_path)):
             app.installTranslator(self.translator)
         self.current_language = code
 
+    def resolve_language_code(self, code: str) -> str:
+        if code != "system":
+            return code
+        locale = QLocale.system()
+        language = locale.language()
+        territory = locale.territory()
+        if language == QLocale.Language.Chinese:
+            if territory in (
+                QLocale.Country.Taiwan,
+                QLocale.Country.HongKong,
+                QLocale.Country.Macau,
+            ):
+                return "zh_TW"
+            return "zh_CN"
+        if language == QLocale.Language.Japanese:
+            return "ja_JP"
+        return "en_US"
+
     def retranslate_ui(self) -> None:
         self.setWindowTitle(self.tr("LDAC Codec Lab"))
         self.language_label.setText(self.tr("Language"))
+        self.language_combo.setItemText(0, self.tr("System Default"))
+        for index, (_code, name) in enumerate(LANGUAGES[1:], start=1):
+            self.language_combo.setItemText(index, name)
         self.browse_button.setText(self.tr("Select Audio"))
         self.output_button.setText(self.tr("Select Output"))
         self.bitrate_combo.setItemText(0, "990")
@@ -514,6 +539,18 @@ class MainWindow(QMainWindow):
         self.encode_box.setTitle(self.tr("Encode Settings"))
         self.decode_box.setTitle(self.tr("Decode Settings"))
         self.gradient_box.setTitle(self.tr("Custom LDAC Gradient"))
+        translated_tooltips = {
+            "nbands": self.tr("Base bands count; controls how many frequency bands are encoded. At 48 kHz LDAC clamps this internally, and too high a value may fail initialization."),
+            "grad-mode": self.tr("Gradient mode; controls how the bit allocation gradient curve is interpreted. Mode 0 uses the full qu/offset range and is useful for manual experiments."),
+            "grad-qu-l": self.tr("Gradient start quantization unit; lower values make the allocation curve affect lower and mid frequencies earlier."),
+            "grad-qu-h": self.tr("Gradient end quantization unit; higher values extend the allocation curve into higher-frequency units."),
+            "grad-ofst-l": self.tr("Start offset; affects bit retention near the beginning of the gradient. Lower values usually preserve more bits there."),
+            "grad-ofst-h": self.tr("End offset; affects high-frequency bit retention. Lower values usually preserve more high-frequency bits but consume budget from other bands."),
+            "abc": self.tr("Advanced bit allocation control flag. Original tables mostly use 0; enabling it may change allocation behavior and should be verified by testing."),
+        }
+        for key, translated in translated_tooltips.items():
+            self.gradient_labels[key].setToolTip(translated)
+            self.gradient_spins[key].setToolTip(translated)
         self.run_button.setText(self.tr("Start"))
         self.roundtrip_button.setText(self.tr("LDAC Round-Trip Test"))
         self.preset_label.setText(

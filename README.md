@@ -14,6 +14,7 @@ Cross-platform Python GUI for experimenting with LDAC encoding and decoding on W
   - Useful for checking how LDAC changes the decoded audio
   - Output names use `_ldac`, for example `song_ldac.wav` or `song_ldac.flac`
 - Multi-language GUI using Qt Linguist translation files:
+  - System default auto-detection
   - English
   - Traditional Chinese (Taiwan)
   - Simplified Chinese
