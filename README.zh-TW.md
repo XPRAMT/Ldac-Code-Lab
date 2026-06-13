@@ -13,6 +13,11 @@
   - 輸入音訊 -> LDAC 編碼 -> LDAC 解碼 -> WAV 或 FLAC
   - 用於檢查 LDAC 對解碼後音訊的影響
   - 輸出檔名會使用 `_ldac`，例如 `song_ldac.wav` 或 `song_ldac.flac`
+- 使用 Qt Linguist 翻譯檔的多語言 GUI：
+  - 英語
+  - 繁體中文（台灣）
+  - 簡體中文
+  - 日語
 - LDAC 碼率預設：990、660、330 kbps
 - 支援自訂碼率
 - 支援自訂 LDAC gradient 參數：
@@ -62,6 +67,20 @@ Linux 下載後如果執行權限遺失，請執行：
 
 ```bash
 chmod +x bin/ldacenc_raw bin/ldacdec_wav
+```
+
+## 翻譯檔
+
+翻譯檔放在 `language/`，使用 Qt Linguist 格式：
+
+- 翻譯來源檔：`*.ts`
+- 執行時載入檔：`*.qm`
+
+修改 GUI 文字後可用下列命令更新翻譯：
+
+```powershell
+pyside6-lupdate ldac_gui.py -ts language\ldac_code_lab_en_US.ts language\ldac_code_lab_zh_TW.ts language\ldac_code_lab_zh_CN.ts language\ldac_code_lab_ja_JP.ts
+pyside6-lrelease language\ldac_code_lab_en_US.ts language\ldac_code_lab_zh_TW.ts language\ldac_code_lab_zh_CN.ts language\ldac_code_lab_ja_JP.ts
 ```
 
 一般音訊格式轉換仍需要 FFmpeg。請安裝 FFmpeg，並確認 `ffmpeg` 可以從 `PATH` 執行。

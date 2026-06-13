@@ -13,6 +13,11 @@ Cross-platform Python GUI for experimenting with LDAC encoding and decoding on W
   - Input audio -> LDAC encode -> LDAC decode -> WAV or FLAC
   - Useful for checking how LDAC changes the decoded audio
   - Output names use `_ldac`, for example `song_ldac.wav` or `song_ldac.flac`
+- Multi-language GUI using Qt Linguist translation files:
+  - English
+  - Traditional Chinese (Taiwan)
+  - Simplified Chinese
+  - Japanese
 - LDAC bitrate presets: 990, 660, 330 kbps
 - Custom bitrate support
 - Custom LDAC gradient parameters:
@@ -62,6 +67,20 @@ On Linux, if the binaries lose their executable bit after download, run:
 
 ```bash
 chmod +x bin/ldacenc_raw bin/ldacdec_wav
+```
+
+## Translations
+
+Translations are stored in `language/` using Qt Linguist files:
+
+- Source translation files: `*.ts`
+- Compiled runtime translation files: `*.qm`
+
+To update translations after changing UI text:
+
+```powershell
+pyside6-lupdate ldac_gui.py -ts language\ldac_code_lab_en_US.ts language\ldac_code_lab_zh_TW.ts language\ldac_code_lab_zh_CN.ts language\ldac_code_lab_ja_JP.ts
+pyside6-lrelease language\ldac_code_lab_en_US.ts language\ldac_code_lab_zh_TW.ts language\ldac_code_lab_zh_CN.ts language\ldac_code_lab_ja_JP.ts
 ```
 
 FFmpeg is still required for general audio format conversion. Install FFmpeg and make sure

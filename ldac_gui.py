@@ -8,7 +8,7 @@ import sys
 import tempfile
 from pathlib import Path
 
-from PySide6.QtCore import Qt, QThread, Signal
+from PySide6.QtCore import Qt, QThread, QTranslator, Signal
 from PySide6.QtWidgets import (
     QApplication,
     QCheckBox,
@@ -33,6 +33,13 @@ from PySide6.QtWidgets import (
 
 APP_DIR = Path(__file__).resolve().parents[1]
 TOOLS_DIR = Path(__file__).resolve().parent / "bin"
+LANGUAGE_DIR = Path(__file__).resolve().parent / "language"
+LANGUAGES = [
+    ("en_US", "English"),
+    ("zh_TW", "繁體中文（台灣）"),
+    ("zh_CN", "简体中文"),
+    ("ja_JP", "日本語"),
+]
 
 
 def bundled_tool(name: str) -> Path:
@@ -115,9 +122,9 @@ class LdacJob(QThread):
 
     def encode_audio(self) -> Path:
         if not FFMPEG.exists():
-            raise FileNotFoundError(f"ffmpeg not found: {FFMPEG}")
+            raise FileNotFoundError(self.tr("ffmpeg not found: {path}").format(path=FFMPEG))
         if not LDACENC_RAW_EXE.exists():
-            raise FileNotFoundError(f"Windows LDAC encoder not found: {LDACENC_RAW_EXE}")
+            raise FileNotFoundError(self.tr("LDAC encoder not found: {path}").format(path=LDACENC_RAW_EXE))
 
         output_ldac = self.output_path
         with tempfile.TemporaryDirectory(prefix="ldac_gui_") as tmp:
@@ -144,24 +151,24 @@ class LdacJob(QThread):
             ]
             ffmpeg_cmd.append(str(pcm_path))
 
-            self.log.emit("Decode input to 32-bit float stereo PCM...")
+            self.log.emit(self.tr("Decode input to 32-bit float stereo PCM..."))
             self.log.emit(run_command(ffmpeg_cmd))
             if not pcm_path.exists() or pcm_path.stat().st_size == 0:
-                raise RuntimeError("ffmpeg did not produce PCM data; input may be unreadable or corrupted.")
+                raise RuntimeError(self.tr("ffmpeg did not produce PCM data; input may be unreadable or corrupted."))
 
             ldac_cmd = self.build_encode_command(pcm_path, output_ldac, encode_rate)
-            self.log.emit(f"Encode LDAC at {self.bitrate} kbps...")
+            self.log.emit(self.tr("Encode LDAC at {bitrate} kbps...").format(bitrate=self.bitrate))
             self.log.emit(run_command(ldac_cmd, cwd=APP_DIR))
 
         return output_ldac
 
     def roundtrip_audio(self) -> Path:
         if not FFMPEG.exists():
-            raise FileNotFoundError(f"ffmpeg not found: {FFMPEG}")
+            raise FileNotFoundError(self.tr("ffmpeg not found: {path}").format(path=FFMPEG))
         if not LDACENC_RAW_EXE.exists():
-            raise FileNotFoundError(f"LDAC encoder not found: {LDACENC_RAW_EXE}")
+            raise FileNotFoundError(self.tr("LDAC encoder not found: {path}").format(path=LDACENC_RAW_EXE))
         if not LDACDEC_WAV_EXE.exists():
-            raise FileNotFoundError(f"LDAC decoder not found: {LDACDEC_WAV_EXE}")
+            raise FileNotFoundError(self.tr("LDAC decoder not found: {path}").format(path=LDACDEC_WAV_EXE))
 
         final_output = self.output_path
         with tempfile.TemporaryDirectory(prefix="ldac_gui_") as tmp:
@@ -191,15 +198,15 @@ class LdacJob(QThread):
                 "f32le",
                 str(pcm_path),
             ]
-            self.log.emit("Decode input to 32-bit float stereo PCM...")
+            self.log.emit(self.tr("Decode input to 32-bit float stereo PCM..."))
             self.log.emit(run_command(ffmpeg_cmd))
             if not pcm_path.exists() or pcm_path.stat().st_size == 0:
-                raise RuntimeError("ffmpeg did not produce PCM data; input may be unreadable or corrupted.")
+                raise RuntimeError(self.tr("ffmpeg did not produce PCM data; input may be unreadable or corrupted."))
 
-            self.log.emit(f"Encode temporary LDAC at {self.bitrate} kbps...")
+            self.log.emit(self.tr("Encode temporary LDAC at {bitrate} kbps...").format(bitrate=self.bitrate))
             self.log.emit(run_command(self.build_encode_command(pcm_path, ldac_path, encode_rate), cwd=APP_DIR))
 
-            self.log.emit("Decode temporary LDAC to 24-bit PCM WAV...")
+            self.log.emit(self.tr("Decode temporary LDAC to 24-bit PCM WAV..."))
             self.log.emit(run_command([str(LDACDEC_WAV_EXE), str(ldac_path), str(decoded_wav)], cwd=APP_DIR))
 
             if self.output_format == "wav":
@@ -217,7 +224,7 @@ class LdacJob(QThread):
                     "flac",
                     str(final_output),
                 ]
-                self.log.emit("Save round-trip output as FLAC...")
+                self.log.emit(self.tr("Save round-trip output as FLAC..."))
                 self.log.emit(run_command(ffmpeg_cmd))
 
         return final_output
@@ -241,15 +248,15 @@ class LdacJob(QThread):
 
     def decode_ldac(self) -> Path:
         if self.output_format == "flac" and not FFMPEG.exists():
-            raise FileNotFoundError(f"ffmpeg not found: {FFMPEG}")
+            raise FileNotFoundError(self.tr("ffmpeg not found: {path}").format(path=FFMPEG))
         if not LDACDEC_WAV_EXE.exists():
-            raise FileNotFoundError(f"Windows LDAC decoder not found: {LDACDEC_WAV_EXE}")
+            raise FileNotFoundError(self.tr("LDAC decoder not found: {path}").format(path=LDACDEC_WAV_EXE))
 
         final_output = self.output_path
         with tempfile.TemporaryDirectory(prefix="ldac_gui_") as tmp:
             decoded_wav = Path(tmp) / "decoded_24bit.wav"
 
-            self.log.emit("Decode LDAC to 24-bit PCM WAV...")
+            self.log.emit(self.tr("Decode LDAC to 24-bit PCM WAV..."))
             self.log.emit(run_command([str(LDACDEC_WAV_EXE), str(self.input_path), str(decoded_wav)], cwd=APP_DIR))
 
             if self.output_format == "wav":
@@ -267,7 +274,7 @@ class LdacJob(QThread):
                     "flac",
                     str(final_output),
                 ]
-                self.log.emit("Convert decoded PCM to FLAC...")
+                self.log.emit(self.tr("Convert decoded PCM to FLAC..."))
                 self.log.emit(run_command(ffmpeg_cmd))
 
         return final_output
@@ -276,13 +283,25 @@ class LdacJob(QThread):
 class MainWindow(QMainWindow):
     def __init__(self) -> None:
         super().__init__()
-        self.setWindowTitle("LDAC Codec Lab")
         self.resize(860, 620)
         self.job: LdacJob | None = None
+        self.translator = QTranslator(self)
+        self.current_language = "en_US"
+
+        self.language_label = QLabel()
+        self.language_combo = QComboBox()
+        for code, name in LANGUAGES:
+            self.language_combo.addItem(name, code)
+        self.language_combo.currentIndexChanged.connect(self.change_language)
+
+        language_row = QHBoxLayout()
+        language_row.addWidget(self.language_label)
+        language_row.addWidget(self.language_combo)
+        language_row.addStretch(1)
 
         self.input_edit = QLineEdit()
         self.input_edit.setReadOnly(True)
-        self.browse_button = QPushButton("選擇音檔")
+        self.browse_button = QPushButton()
         self.browse_button.clicked.connect(self.choose_file)
 
         file_row = QHBoxLayout()
@@ -290,18 +309,21 @@ class MainWindow(QMainWindow):
         file_row.addWidget(self.browse_button)
 
         self.output_edit = QLineEdit()
-        self.output_button = QPushButton("選擇輸出")
+        self.output_button = QPushButton()
         self.output_button.clicked.connect(self.choose_output)
 
         output_row = QHBoxLayout()
         output_row.addWidget(self.output_edit, 1)
         output_row.addWidget(self.output_button)
 
-        self.mode_label = QLabel("尚未選擇")
+        self.mode_label = QLabel()
         self.mode_label.setAlignment(Qt.AlignLeft)
 
         self.bitrate_combo = QComboBox()
-        self.bitrate_combo.addItems(["990", "660", "330", "自訂"])
+        self.bitrate_combo.addItem("990", 990)
+        self.bitrate_combo.addItem("660", 660)
+        self.bitrate_combo.addItem("330", 330)
+        self.bitrate_combo.addItem("", "custom")
         self.bitrate_combo.currentTextChanged.connect(self.sync_bitrate_mode)
         self.custom_bitrate = QSpinBox()
         self.custom_bitrate.setRange(132, 1536)
@@ -310,7 +332,7 @@ class MainWindow(QMainWindow):
         self.custom_bitrate.setEnabled(False)
 
         self.sample_rate_combo = QComboBox()
-        self.sample_rate_combo.addItem("自動/保持", None)
+        self.sample_rate_combo.addItem("", None)
         for rate in (44100, 48000, 88200, 96000):
             self.sample_rate_combo.addItem(f"{rate} Hz", rate)
 
@@ -318,19 +340,23 @@ class MainWindow(QMainWindow):
         self.output_format.addItems(["wav", "flac"])
         self.output_format.currentTextChanged.connect(self.refresh_output_path)
 
+        self.bitrate_label = QLabel()
+        self.custom_bitrate_label = QLabel()
+        self.sample_rate_label = QLabel()
         encode_form = QFormLayout()
-        encode_form.addRow("碼率", self.bitrate_combo)
-        encode_form.addRow("自訂碼率", self.custom_bitrate)
-        encode_form.addRow("輸入轉 PCM 取樣率", self.sample_rate_combo)
-        encode_box = QGroupBox("編碼設定")
-        encode_box.setLayout(encode_form)
+        encode_form.addRow(self.bitrate_label, self.bitrate_combo)
+        encode_form.addRow(self.custom_bitrate_label, self.custom_bitrate)
+        encode_form.addRow(self.sample_rate_label, self.sample_rate_combo)
+        self.encode_box = QGroupBox()
+        self.encode_box.setLayout(encode_form)
 
+        self.output_format_label = QLabel()
         decode_form = QFormLayout()
-        decode_form.addRow("輸出格式", self.output_format)
-        decode_box = QGroupBox("解碼設定")
-        decode_box.setLayout(decode_form)
+        decode_form.addRow(self.output_format_label, self.output_format)
+        self.decode_box = QGroupBox()
+        self.decode_box.setLayout(decode_form)
 
-        self.gradient_box = QGroupBox("自訂 LDAC Gradient")
+        self.gradient_box = QGroupBox()
         self.gradient_box.setCheckable(True)
         self.gradient_box.setChecked(False)
         gradient_grid = QGridLayout()
@@ -342,7 +368,7 @@ class MainWindow(QMainWindow):
                 2,
                 17,
                 12,
-                "Base bands 數量；決定編碼涵蓋到多少頻帶。48 kHz 會被 LDAC 內部上限限制，過高可能初始化失敗。",
+                self.tr("Base bands count; controls how many frequency bands are encoded. At 48 kHz LDAC clamps this internally, and too high a value may fail initialization."),
             ),
             (
                 "grad-mode",
@@ -350,7 +376,7 @@ class MainWindow(QMainWindow):
                 0,
                 3,
                 0,
-                "Gradient 模式；控制 bit allocation 梯度曲線的解讀方式。mode 0 使用完整 qu/offset 範圍，較適合手動實驗。",
+                self.tr("Gradient mode; controls how the bit allocation gradient curve is interpreted. Mode 0 uses the full qu/offset range and is useful for manual experiments."),
             ),
             (
                 "grad-qu-l",
@@ -358,7 +384,7 @@ class MainWindow(QMainWindow):
                 0,
                 31,
                 18,
-                "Gradient 起始 quantization unit；數值越低，分配曲線越早影響低/中頻。",
+                self.tr("Gradient start quantization unit; lower values make the allocation curve affect lower and mid frequencies earlier."),
             ),
             (
                 "grad-qu-h",
@@ -366,7 +392,7 @@ class MainWindow(QMainWindow):
                 1,
                 32,
                 32,
-                "Gradient 結束 quantization unit；數值越高，分配曲線延伸到更高頻的量化單元。",
+                self.tr("Gradient end quantization unit; higher values extend the allocation curve into higher-frequency units."),
             ),
             (
                 "grad-ofst-l",
@@ -374,7 +400,7 @@ class MainWindow(QMainWindow):
                 0,
                 31,
                 7,
-                "起始 offset；影響梯度前段的 bit 保留傾向。較小通常讓該區域懲罰較少、保留較多。",
+                self.tr("Start offset; affects bit retention near the beginning of the gradient. Lower values usually preserve more bits there."),
             ),
             (
                 "grad-ofst-h",
@@ -382,7 +408,7 @@ class MainWindow(QMainWindow):
                 0,
                 31,
                 23,
-                "結束 offset；影響高頻端 bit 保留傾向。較小通常讓高頻被保留更多，但會消耗其他頻段 bit budget。",
+                self.tr("End offset; affects high-frequency bit retention. Lower values usually preserve more high-frequency bits but consume budget from other bands."),
             ),
             (
                 "abc",
@@ -390,7 +416,7 @@ class MainWindow(QMainWindow):
                 0,
                 1,
                 0,
-                "Advanced bit allocation control flag；原始表多為 0。開啟可能改變 bit allocation 行為，需用實測確認。",
+                self.tr("Advanced bit allocation control flag. Original tables mostly use 0; enabling it may change allocation behavior and should be verified by testing."),
             ),
         ]
         for index, (key, label, low, high, default, tooltip) in enumerate(gradient_specs):
@@ -406,33 +432,18 @@ class MainWindow(QMainWindow):
             gradient_grid.addWidget(name_label, row, col)
             gradient_grid.addWidget(spin, row, col + 1)
 
-        preset_label = QLabel(
-            "原始 LDAC 預設參數\n"
-            "欄位: nbands, mode, quL, quH, ofstL, ofstH, abc\n\n"
-            "48k / 44.1k:\n"
-            "990k: 12, 0, 18, 32,  7, 23, 0\n"
-            "660k: 12, 0, 16, 32, 10, 31, 0\n"
-            "330k: 10, 0, 14, 26, 12, 31, 0\n\n"
-            "96k / 88.2k:\n"
-            "990k: 16, 0, 18, 32,  7, 23, 0\n"
-            "660k: 13, 0, 16, 32, 10, 31, 0\n"
-            "330k: 10, 0, 14, 26, 12, 31, 0"
-        )
-        preset_label.setTextInteractionFlags(Qt.TextSelectableByMouse)
-        preset_label.setToolTip(
-            "48k/44.1k 屬於 1FS，LDAC 內部最多 12 bands；"
-            "96k/88.2k 屬於 2FS，最多 16 bands。gradient 其他欄位相同。"
-        )
-        preset_label.setStyleSheet("font-family: Consolas, monospace;")
+        self.preset_label = QLabel()
+        self.preset_label.setTextInteractionFlags(Qt.TextSelectableByMouse)
+        self.preset_label.setStyleSheet("font-family: Consolas, monospace;")
 
         gradient_layout = QHBoxLayout()
         gradient_layout.addLayout(gradient_grid, 1)
-        gradient_layout.addWidget(preset_label)
+        gradient_layout.addWidget(self.preset_label)
         self.gradient_box.setLayout(gradient_layout)
 
-        self.run_button = QPushButton("開始")
+        self.run_button = QPushButton()
         self.run_button.clicked.connect(self.start_auto)
-        self.roundtrip_button = QPushButton("LDAC往返測試")
+        self.roundtrip_button = QPushButton()
         self.roundtrip_button.clicked.connect(self.start_roundtrip)
 
         action_row = QHBoxLayout()
@@ -448,12 +459,13 @@ class MainWindow(QMainWindow):
 
         central = QWidget()
         layout = QVBoxLayout(central)
+        layout.addLayout(language_row)
         layout.addLayout(file_row)
         layout.addLayout(output_row)
         layout.addWidget(self.mode_label)
         settings_row = QHBoxLayout()
-        settings_row.addWidget(encode_box)
-        settings_row.addWidget(decode_box)
+        settings_row.addWidget(self.encode_box)
+        settings_row.addWidget(self.decode_box)
         layout.addLayout(settings_row)
         layout.addWidget(self.gradient_box)
         layout.addLayout(action_row)
@@ -461,15 +473,76 @@ class MainWindow(QMainWindow):
         layout.addWidget(self.log_output, 1)
         self.setCentralWidget(central)
 
+        self.load_language(self.current_language)
+        self.retranslate_ui()
         self.sync_bitrate_mode()
         self.refresh_mode()
+
+    def change_language(self) -> None:
+        code = self.language_combo.currentData()
+        if code:
+            self.load_language(code)
+            self.retranslate_ui()
+            self.refresh_mode()
+            self.refresh_output_path()
+
+    def load_language(self, code: str) -> None:
+        app = QApplication.instance()
+        if app is None:
+            return
+        app.removeTranslator(self.translator)
+        self.translator = QTranslator(self)
+        qm_path = LANGUAGE_DIR / f"ldac_code_lab_{code}.qm"
+        if qm_path.exists() and self.translator.load(str(qm_path)):
+            app.installTranslator(self.translator)
+        self.current_language = code
+
+    def retranslate_ui(self) -> None:
+        self.setWindowTitle(self.tr("LDAC Codec Lab"))
+        self.language_label.setText(self.tr("Language"))
+        self.browse_button.setText(self.tr("Select Audio"))
+        self.output_button.setText(self.tr("Select Output"))
+        self.bitrate_combo.setItemText(0, "990")
+        self.bitrate_combo.setItemText(1, "660")
+        self.bitrate_combo.setItemText(2, "330")
+        self.bitrate_combo.setItemText(3, self.tr("Custom"))
+        self.sample_rate_combo.setItemText(0, self.tr("Auto / keep source"))
+        self.bitrate_label.setText(self.tr("Bitrate"))
+        self.custom_bitrate_label.setText(self.tr("Custom bitrate"))
+        self.sample_rate_label.setText(self.tr("PCM sample rate"))
+        self.output_format_label.setText(self.tr("Output format"))
+        self.encode_box.setTitle(self.tr("Encode Settings"))
+        self.decode_box.setTitle(self.tr("Decode Settings"))
+        self.gradient_box.setTitle(self.tr("Custom LDAC Gradient"))
+        self.run_button.setText(self.tr("Start"))
+        self.roundtrip_button.setText(self.tr("LDAC Round-Trip Test"))
+        self.preset_label.setText(
+            self.tr(
+                "Original LDAC preset parameters\n"
+                "Fields: nbands, mode, quL, quH, ofstL, ofstH, abc\n\n"
+                "48k / 44.1k:\n"
+                "990k: 12, 0, 18, 32,  7, 23, 0\n"
+                "660k: 12, 0, 16, 32, 10, 31, 0\n"
+                "330k: 10, 0, 14, 26, 12, 31, 0\n\n"
+                "96k / 88.2k:\n"
+                "990k: 16, 0, 18, 32,  7, 23, 0\n"
+                "660k: 13, 0, 16, 32, 10, 31, 0\n"
+                "330k: 10, 0, 14, 26, 12, 31, 0"
+            )
+        )
+        self.preset_label.setToolTip(
+            self.tr(
+                "44.1/48 kHz are 1FS and LDAC allows up to 12 bands; "
+                "88.2/96 kHz are 2FS and allow up to 16 bands. Other gradient fields are the same."
+            )
+        )
 
     def choose_file(self) -> None:
         path, _ = QFileDialog.getOpenFileName(
             self,
-            "選擇音檔",
+            self.tr("Select Audio"),
             str(Path.home()),
-            "Audio Files (*.ldac *.wav *.flac *.m4a *.aac *.mp3 *.ogg *.opus);;All Files (*)",
+            self.tr("Audio Files (*.ldac *.wav *.flac *.m4a *.aac *.mp3 *.ogg *.opus);;All Files (*)"),
         )
         if path:
             self.input_edit.setText(path)
@@ -489,7 +562,7 @@ class MainWindow(QMainWindow):
 
         path, _ = QFileDialog.getSaveFileName(
             self,
-            "選擇輸出路徑",
+            self.tr("Select Output Path"),
             str(default_path),
             file_filter,
         )
@@ -497,17 +570,17 @@ class MainWindow(QMainWindow):
             self.output_edit.setText(path)
 
     def sync_bitrate_mode(self) -> None:
-        self.custom_bitrate.setEnabled(self.bitrate_combo.currentText() == "自訂")
+        self.custom_bitrate.setEnabled(self.bitrate_combo.currentData() == "custom")
 
     def refresh_mode(self) -> None:
         path = self.selected_input()
         if path is None:
-            self.mode_label.setText("尚未選擇音檔")
+            self.mode_label.setText(self.tr("No audio file selected"))
             return
         if path.suffix.lower() == ".ldac":
-            self.mode_label.setText("輸入為 LDAC：可解碼為 WAV/FLAC")
+            self.mode_label.setText(self.tr("Input is LDAC: it can be decoded to WAV/FLAC"))
         else:
-            self.mode_label.setText("輸入為一般音訊：會先轉 24-bit PCM，再編碼為 LDAC")
+            self.mode_label.setText(self.tr("Input is regular audio: it will be converted to PCM before LDAC encoding"))
 
     def refresh_output_path(self) -> None:
         path = self.selected_input()
@@ -532,9 +605,9 @@ class MainWindow(QMainWindow):
         return Path(text)
 
     def selected_bitrate(self) -> int:
-        if self.bitrate_combo.currentText() == "自訂":
+        if self.bitrate_combo.currentData() == "custom":
             return self.custom_bitrate.value()
-        return int(self.bitrate_combo.currentText())
+        return int(self.bitrate_combo.currentData())
 
     def selected_sample_rate(self) -> int | None:
         return self.sample_rate_combo.currentData()
@@ -565,7 +638,11 @@ class MainWindow(QMainWindow):
         if path is None:
             return
         if path.suffix.lower() == ".ldac":
-            QMessageBox.warning(self, "輸入類型不符", "LDAC 往返測試需要一般音訊檔，不接受 .ldac。")
+            QMessageBox.warning(
+                self,
+                self.tr("Input type mismatch"),
+                self.tr("LDAC round-trip test requires a regular audio file and does not accept .ldac input."),
+            )
             return
         output = self.roundtrip_output_path(path)
         self.output_edit.setText(str(output))
@@ -575,7 +652,7 @@ class MainWindow(QMainWindow):
     def require_input(self) -> Path | None:
         path = self.selected_input()
         if path is None or not path.exists():
-            QMessageBox.warning(self, "找不到檔案", "請先選擇存在的音檔。")
+            QMessageBox.warning(self, self.tr("File not found"), self.tr("Please select an existing audio file first."))
             return None
         return path
 
@@ -584,7 +661,7 @@ class MainWindow(QMainWindow):
         if output is None:
             input_path = self.selected_input()
             if input_path is None:
-                QMessageBox.warning(self, "缺少輸出路徑", "請先選擇輸出路徑。")
+                QMessageBox.warning(self, self.tr("Missing output path"), self.tr("Please select an output path first."))
                 return None
             output = self.default_output_path(input_path)
             self.output_edit.setText(str(output))
@@ -628,13 +705,13 @@ class MainWindow(QMainWindow):
 
     def job_done(self, output: Path) -> None:
         self.set_busy(False)
-        self.append_log(f"完成：{output}")
-        QMessageBox.information(self, "完成", f"輸出完成：\n{output}")
+        self.append_log(self.tr("Done: {path}").format(path=output))
+        QMessageBox.information(self, self.tr("Done"), self.tr("Output completed:\n{path}").format(path=output))
 
     def job_failed(self, message: str) -> None:
         self.set_busy(False)
         self.append_log(message)
-        QMessageBox.critical(self, "失敗", message)
+        QMessageBox.critical(self, self.tr("Failed"), message)
 
 
 def main() -> int:
