@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import platform
 import shutil
 import subprocess
 import sys
@@ -31,9 +32,20 @@ from PySide6.QtWidgets import (
 
 
 APP_DIR = Path(__file__).resolve().parents[1]
-WINDOWS_TOOLS_DIR = Path(__file__).resolve().parent / "bin"
-LDACENC_RAW_EXE = WINDOWS_TOOLS_DIR / "ldacenc_raw.exe"
-LDACDEC_WAV_EXE = WINDOWS_TOOLS_DIR / "ldacdec_wav.exe"
+TOOLS_DIR = Path(__file__).resolve().parent / "bin"
+
+
+def bundled_tool(name: str) -> Path:
+    system = platform.system()
+    if system == "Windows":
+        return TOOLS_DIR / f"{name}.exe"
+    if system == "Linux":
+        return TOOLS_DIR / name
+    raise RuntimeError(f"Unsupported operating system: {system}")
+
+
+LDACENC_RAW_EXE = bundled_tool("ldacenc_raw")
+LDACDEC_WAV_EXE = bundled_tool("ldacdec_wav")
 
 
 def find_ffmpeg() -> Path:

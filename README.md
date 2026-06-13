@@ -2,7 +2,7 @@
 
 [English](README.md) | [繁體中文](README.zh-TW.md)
 
-Windows GUI for experimenting with LDAC encoding and decoding.
+Cross-platform Python GUI for experimenting with LDAC encoding and decoding on Windows and Linux.
 
 ## Features
 
@@ -43,12 +43,22 @@ RUN.bat
 
 ## Included Binaries
 
-The GUI uses Windows native helper binaries in `bin/`:
+The GUI uses bundled native helper binaries in `bin/`:
 
-- `bin/ldacenc_raw.exe`
-- `bin/ldacdec_wav.exe`
+- Windows:
+  - `bin/ldacenc_raw.exe`
+  - `bin/ldacdec_wav.exe`
+- Linux:
+  - `bin/ldacenc_raw`
+  - `bin/ldacdec_wav`
 
-These are built from the local LDAC source tree and avoid requiring WSL at runtime.
+These are built from the local LDAC source tree. Windows no longer requires WSL at runtime.
+
+On Linux, if the binaries lose their executable bit after download, run:
+
+```bash
+chmod +x bin/ldacenc_raw bin/ldacdec_wav
+```
 
 FFmpeg is still required for general audio format conversion. Install FFmpeg and make sure
 `ffmpeg` can be executed from your `PATH`.

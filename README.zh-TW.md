@@ -2,7 +2,7 @@
 
 [English](README.md) | [繁體中文](README.zh-TW.md)
 
-這是一個用於 LDAC 編碼、解碼與參數實驗的 Windows GUI 工具。
+這是一個用於 LDAC 編碼、解碼與參數實驗的跨平台 Python GUI 工具，支援 Windows 與 Linux。
 
 ## 功能
 
@@ -43,12 +43,22 @@ RUN.bat
 
 ## 內含執行檔
 
-GUI 使用 `bin/` 裡的 Windows 原生輔助工具：
+GUI 使用 `bin/` 裡的原生輔助工具：
 
-- `bin/ldacenc_raw.exe`
-- `bin/ldacdec_wav.exe`
+- Windows:
+  - `bin/ldacenc_raw.exe`
+  - `bin/ldacdec_wav.exe`
+- Linux:
+  - `bin/ldacenc_raw`
+  - `bin/ldacdec_wav`
 
-這些執行檔由本地 LDAC 原始碼建置而來，執行 GUI 時不需要 WSL。
+這些執行檔由本地 LDAC 原始碼建置而來。Windows 執行 GUI 時不需要 WSL。
+
+Linux 下載後如果執行權限遺失，請執行：
+
+```bash
+chmod +x bin/ldacenc_raw bin/ldacdec_wav
+```
 
 一般音訊格式轉換仍需要 FFmpeg。請安裝 FFmpeg，並確認 `ffmpeg` 可以從 `PATH` 執行。
 
