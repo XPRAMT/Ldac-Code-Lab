@@ -132,6 +132,8 @@ class LdacJob(QThread):
 
             self.log.emit("Decode input to 32-bit float stereo PCM...")
             self.log.emit(run_command(ffmpeg_cmd))
+            if not pcm_path.exists() or pcm_path.stat().st_size == 0:
+                raise RuntimeError("ffmpeg did not produce PCM data; input may be unreadable or corrupted.")
 
             ldac_cmd = self.build_encode_command(pcm_path, output_ldac, encode_rate)
             self.log.emit(f"Encode LDAC at {self.bitrate} kbps...")
