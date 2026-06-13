@@ -69,37 +69,37 @@
     <message>
         <location filename="../ldac_gui.py" line="543" />
         <source>Base bands count; controls how many frequency bands are encoded. At 48 kHz LDAC clamps this internally, and too high a value may fail initialization.</source>
-        <translation>Base bands count; controls how many frequency bands are encoded. At 48 kHz LDAC clamps this internally, and too high a value may fail initialization.</translation>
+        <translation>Base bands 數量；決定編碼涵蓋到多少頻帶。48 kHz 會被 LDAC 內部上限限制，過高可能初始化失敗。</translation>
     </message>
     <message>
         <location filename="../ldac_gui.py" line="544" />
         <source>Gradient mode; controls how the bit allocation gradient curve is interpreted. Mode 0 uses the full qu/offset range and is useful for manual experiments.</source>
-        <translation>Gradient mode; controls how the bit allocation gradient curve is interpreted. Mode 0 uses the full qu/offset range and is useful for manual experiments.</translation>
+        <translation>Gradient 模式；控制 bit allocation 梯度曲線的解讀方式。mode 0 使用完整 qu/offset 範圍，較適合手動實驗。</translation>
     </message>
     <message>
         <location filename="../ldac_gui.py" line="545" />
         <source>Gradient start quantization unit; lower values make the allocation curve affect lower and mid frequencies earlier.</source>
-        <translation>Gradient start quantization unit; lower values make the allocation curve affect lower and mid frequencies earlier.</translation>
+        <translation>Gradient 起始 quantization unit；數值越低，分配曲線越早影響低/中頻。</translation>
     </message>
     <message>
         <location filename="../ldac_gui.py" line="546" />
         <source>Gradient end quantization unit; higher values extend the allocation curve into higher-frequency units.</source>
-        <translation>Gradient end quantization unit; higher values extend the allocation curve into higher-frequency units.</translation>
+        <translation>Gradient 結束 quantization unit；數值越高，分配曲線會延伸到更高頻的量化單元。</translation>
     </message>
     <message>
         <location filename="../ldac_gui.py" line="547" />
         <source>Start offset; affects bit retention near the beginning of the gradient. Lower values usually preserve more bits there.</source>
-        <translation>Start offset; affects bit retention near the beginning of the gradient. Lower values usually preserve more bits there.</translation>
+        <translation>起始 offset；影響梯度前段的 bit 保留傾向。較小通常讓該區域懲罰較少、保留較多。</translation>
     </message>
     <message>
         <location filename="../ldac_gui.py" line="548" />
         <source>End offset; affects high-frequency bit retention. Lower values usually preserve more high-frequency bits but consume budget from other bands.</source>
-        <translation>End offset; affects high-frequency bit retention. Lower values usually preserve more high-frequency bits but consume budget from other bands.</translation>
+        <translation>結束 offset；影響高頻端 bit 保留傾向。較小通常讓高頻保留更多，但會消耗其他頻段的 bit budget。</translation>
     </message>
     <message>
         <location filename="../ldac_gui.py" line="549" />
         <source>Advanced bit allocation control flag. Original tables mostly use 0; enabling it may change allocation behavior and should be verified by testing.</source>
-        <translation>Advanced bit allocation control flag. Original tables mostly use 0; enabling it may change allocation behavior and should be verified by testing.</translation>
+        <translation>Advanced bit allocation control 旗標；原始表多為 0。開啟可能改變 bit allocation 行為，需用實測確認。</translation>
     </message>
     <message>
         <location filename="../ldac_gui.py" line="523" />
