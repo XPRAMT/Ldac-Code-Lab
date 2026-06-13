@@ -1,5 +1,7 @@
 # LDAC Code Lab
 
+[English](README.md) | [繁體中文](README.zh-TW.md)
+
 Windows GUI for experimenting with LDAC encoding and decoding.
 
 ## Features
